@@ -146,7 +146,7 @@ class SMARTSGraph(nx.Graph):
         elif atom_id.head == 'matches_string':
             raise NotImplementedError('matches_string is not yet implemented')
 
-    def find_matches(self, topology):
+    def find_matches(self, top_graph):
         """Return sets of atoms that match this SMARTS pattern in a topology.
 
         Notes:
@@ -161,16 +161,6 @@ class SMARTSGraph(nx.Graph):
 
         """
         # Note: Needs to be updated in sync with the grammar in `smarts.py`.
-        ring_tokens = ['ring_size', 'ring_count']
-        has_ring_rules = any(self.ast.select(token)
-                             for token in ring_tokens)
-        _prepare_atoms(topology, compute_cycles=has_ring_rules)
-
-        top_graph = nx.Graph()
-        top_graph.add_nodes_from(((a.index, {'atom': a})
-                                  for a in topology.atoms()))
-        top_graph.add_edges_from(((b[0].index, b[1].index)
-                                  for b in topology.bonds()))
 
         if self._graph_matcher is None:
             atom = nx.get_node_attributes(self, name='atom')[0]

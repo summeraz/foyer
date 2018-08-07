@@ -1,5 +1,7 @@
 from warnings import warn
 
+import networkx as nx
+
 from foyer.exceptions import FoyerError
 from foyer.smarts_graph import SMARTSGraph
 
@@ -39,7 +41,9 @@ def find_atomtypes(topology, forcefield, max_iter=10):
             subrules[key] = val
     rules = subrules
 
-    _iterate_rules(rules, topology, max_iter=max_iter)
+    top_graph = _prepare_topology(topology)
+
+    _iterate_rules(rules, topology, top_graph, max_iter=max_iter)
     _resolve_atomtypes(topology)
 
 
@@ -59,7 +63,7 @@ def _load_rules(forcefield):
     return rules
 
 
-def _iterate_rules(rules, topology, max_iter):
+def _iterate_rules(rules, topology, top_graph, max_iter):
     """Iteratively run all the rules until the white- and backlists converge.
 
     Parameters
@@ -78,7 +82,7 @@ def _iterate_rules(rules, topology, max_iter):
         max_iter -= 1
         found_something = False
         for rule in rules.values():
-            for match_index in rule.find_matches(topology):
+            for match_index in rule.find_matches(top_graph):
                 atom = atoms[match_index]
                 if rule.name not in atom.whitelist:
                     atom.whitelist.add(rule.name)
@@ -102,3 +106,16 @@ def _resolve_atomtypes(topology):
         else:
             raise FoyerError("Found no types for atom {} ({}).".format(
                 atom.index, atom.element.name))
+
+def _prepare_topology(topology):
+    from foyer.smarts_graph import _prepare_atoms
+
+    _prepare_atoms(topology, compute_cycles=True)
+
+    top_graph = nx.Graph()
+    top_graph.add_nodes_from(((a.index, {'atom': a}) 
+                              for a in topology.atoms()))
+    top_graph.add_edges_from(((b[0].index, b[1].index)
+                              for b in topology.bonds()))
+
+    return top_graph
